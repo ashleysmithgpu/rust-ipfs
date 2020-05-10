@@ -1,6 +1,7 @@
 use crate::subscription::{SubscriptionFuture, SubscriptionRegistry};
 use core::task::{Context, Poll};
 use libp2p::core::{ConnectedPoint, Multiaddr, PeerId};
+use libp2p::core::connection::{ConnectionId};
 use libp2p::swarm::protocols_handler::{
     DummyProtocolsHandler, IntoProtocolsHandler, ProtocolsHandler,
 };
@@ -19,10 +20,12 @@ pub struct Disconnector {
     peer_id: PeerId,
 }
 
+pub use crate::p2p::SwarmTypes;
+use crate::p2p::TSwarm;
 impl Disconnector {
-    pub fn disconnect<T: NetworkBehaviour>(self, swarm: &mut Swarm<T>) {
-        Swarm::ban_peer_id(swarm, self.peer_id.clone());
-        Swarm::unban_peer_id(swarm, self.peer_id);
+    pub fn disconnect<Types: SwarmTypes>(self, mut swarm: &mut TSwarm<Types>) {
+        Swarm::ban_peer_id(&mut swarm, self.peer_id.clone());
+        Swarm::unban_peer_id(&mut swarm, self.peer_id);
     }
 }
 
@@ -107,8 +110,12 @@ impl NetworkBehaviour for SwarmApi {
         }
     }
 
-    fn inject_connected(&mut self, peer_id: PeerId, cp: ConnectedPoint) {
-        log::trace!("inject_connected {} {:?}", peer_id.to_string(), cp);
+    fn inject_connected(&mut self, peer_id: &PeerId) {
+        log::trace!("inject_connected {}", peer_id.to_string());
+    }
+
+    fn inject_connection_established(&mut self, peer_id: &PeerId, connection_id: &ConnectionId, cp: &ConnectedPoint) {
+        log::trace!("inject_connection_established {} {:?} {:?}", peer_id.to_string(), connection_id, cp);
         let addr = match cp {
             ConnectedPoint::Dialer { address } => address,
             ConnectedPoint::Listener { send_back_addr, .. } => send_back_addr,
@@ -119,13 +126,17 @@ impl NetworkBehaviour for SwarmApi {
             rtt: None,
         };
         self.peers.insert(peer_id.clone());
-        self.connected_peers.insert(peer_id, addr.clone());
+        self.connected_peers.insert(peer_id.to_owned(), addr.clone());
         self.connections.insert(addr.clone(), conn);
         self.connect_registry.finish_subscription(&addr, Ok(()));
     }
 
-    fn inject_disconnected(&mut self, peer_id: &PeerId, cp: ConnectedPoint) {
-        log::trace!("inject_disconnected {} {:?}", peer_id.to_string(), cp);
+    fn inject_disconnected(&mut self, peer_id: &PeerId) {
+        log::trace!("inject_disconnected {}", peer_id.to_string());
+    }
+
+    fn inject_connection_closed(&mut self, peer_id: &PeerId, connection_id: &ConnectionId, cp: &ConnectedPoint) {
+        log::trace!("inject_connection_closed {} {:?} {:?}", peer_id.to_string(), connection_id, cp);
         let addr = match cp {
             ConnectedPoint::Dialer { address } => address,
             ConnectedPoint::Listener { send_back_addr, .. } => send_back_addr,
@@ -134,7 +145,7 @@ impl NetworkBehaviour for SwarmApi {
         self.connections.remove(&addr);
     }
 
-    fn inject_node_event(&mut self, _peer_id: PeerId, _event: void::Void) {}
+    fn inject_event(&mut self, _peer_id: PeerId, _connection: libp2p::core::connection::ConnectionId, _event: void::Void) {}
 
     fn inject_addr_reach_failure(
         &mut self,

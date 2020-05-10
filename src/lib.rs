@@ -585,16 +585,50 @@ impl<Types: SwarmTypes> Future for IpfsFuture<Types> {
                 done = false;
                 match inner {
                     SwarmEvent::Behaviour(()) => {}
-                    SwarmEvent::Connected(_peer_id) => {}
-                    SwarmEvent::Disconnected(_peer_id) => {}
-                    SwarmEvent::NewListenAddr(_addr) => {}
-                    SwarmEvent::ExpiredListenAddr(_addr) => {}
+                    SwarmEvent::ConnectionEstablished {
+                        peer_id: _peer_id,
+                        endpoint: _endpoint,
+                        num_established: _num_established
+                    } => {}
+                    SwarmEvent::ConnectionClosed {
+                        peer_id: _peer_id,
+                        endpoint: _endpoint,
+                        num_established: _num_established,
+                        cause: _cause
+                    } => {}
+                    SwarmEvent::IncomingConnection {
+                        local_addr: _local_addr,
+                        send_back_addr: _send_back_addr
+                    } => {}
+                    SwarmEvent::IncomingConnectionError {
+                        local_addr: _local_addr,
+                        send_back_addr: _send_back_addr,
+                        error: _error
+                    } => {}
+                    SwarmEvent::BannedPeer {
+                        peer_id: _peer_id,
+                        endpoint: _endpoint
+                    } => {}
                     SwarmEvent::UnreachableAddr {
                         peer_id: _peer_id,
                         address: _address,
                         error: _error,
+                        attempts_remaining: _attempts_remaining,
                     } => {}
-                    SwarmEvent::StartConnect(_peer_id) => {}
+                    SwarmEvent::UnknownPeerUnreachableAddr {
+                        address: _address,
+                        error: _error
+                    } => {}
+                    SwarmEvent::NewListenAddr(_peer_id) => {}
+                    SwarmEvent::ExpiredListenAddr(_peer_id) => {}
+                    SwarmEvent::ListenerClosed {
+                        addresses: _addresses,
+                        reason: _reason
+                    } => {}
+                    SwarmEvent::ListenerError {
+                        error: _error,
+                    } => {}
+                    SwarmEvent::Dialing(_peer_id) => {}
                 }
             }
 
